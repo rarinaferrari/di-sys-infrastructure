@@ -1,0 +1,3 @@
+ip_address_web_server1: "{{ groups['web'][0]  }}"
+ip_address_web_server2: "{{ groups['web'][1]  }}"
+ip_address_prometheus: "{{ groups['prometheus'][0]  }}"

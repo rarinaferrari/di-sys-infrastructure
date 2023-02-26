@@ -1,0 +1,18 @@
+- hosts: web
+  name: Install Nginx, Node Exporter, Nginx Log Exporter, Filebeat
+  become: true
+  roles:
+   - web
+   - filebeat
+
+- hosts: prometheus
+  name: Install prometheus
+  become: true
+  roles:
+   - prometheus
+
+- hosts: grafana
+  name: Install Grafana
+  become: true
+  roles:
+   - grafana

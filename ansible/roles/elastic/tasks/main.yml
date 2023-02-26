@@ -1,0 +1,29 @@
+########################################
+########### ELASTICSEARCH ##############
+########################################
+- name: add repository
+  shell:
+    "echo \"deb [trusted=yes] https://mirror.yandex.ru/mirrors/elastic/7/ stable main\" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list"
+
+- name: install elastic
+  apt:
+    name: elasticsearch
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: delete default config elastic.yml
+  ansible.builtin.file:
+    path: /etc/elasticsearch/elasticsearch.yml
+    state: absent
+
+- name: elastic new config file
+  template:
+    src: elastic.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+
+- name: change group elastic
+  shell: chown root:elasticsearch /etc/elasticsearch/elasticsearch.yml
+  notify: start Elasticsearch
+
+

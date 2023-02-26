@@ -1,0 +1,140 @@
+#########################
+###### WEB_SERVERS ######
+#########################
+- name: Update repositories cache and install "nginx" package
+  apt:
+    name: nginx
+    update_cache: yes
+
+- name: Make sure a service nginx is running
+  systemd:
+    state: started
+    name: nginx
+
+- name: enable service nginx and ensure it is not masked
+  systemd:
+    name: nginx
+    enabled: yes
+    masked: no
+
+- name: config log format
+  lineinfile:
+    dest: /etc/nginx/nginx.conf
+    insertbefore: '^\s*access_log'
+    line: '        log_format custom ''$remote_addr - [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" "$request_length" "$upstream_response_time" "$request_time"'';'
+    state: present
+
+- name: config log path (access.log)
+  lineinfile:
+    dest: /etc/nginx/nginx.conf
+    regexp: '^\s*access_log'
+    line: '        access_log /var/log/nginx/access.log custom;'
+    state: present
+  notify: Restarted nginx
+
+- name: chmod user /var/log/nginx
+  file:
+    dest: /var/log/nginx
+    mode: 0775
+    recurse: yes
+
+- name: chmod user /var/log/nginx/error.log
+  file:
+    dest: /var/log/nginx/error.log
+    mode: 0775
+  become: yes
+- name: chmod user /var/log/nginx/access.log
+  file:
+    dest: /var/log/nginx/access.log
+    mode: 0775
+
+- name: Create a directory "Node_exporter" if it does not exist
+  file:
+    path: /usr/local/bin/node-exporter
+    state: directory
+    owner: root
+    group: root
+    mode: 0644
+
+- name: download node-exporter
+  ansible.builtin.unarchive:
+    src: https://github.com/prometheus/node_exporter/releases/download/v1.0.0/node_exporter-1.0.0.linux-amd64.tar.gz
+    dest: /usr/local/bin/node-exporter
+    remote_src: yes
+
+- name: Copy file /usr/local/bin/node-exporter/node_exporter
+  copy:
+    src: /usr/local/bin/node-exporter/node_exporter-1.0.0.linux-amd64/node_exporter
+    dest: /usr/local/bin/node-exporter/node_exporter
+    remote_src: yes
+
+- name: chmod user /etc/prometheus/node-exporter/node_exporter
+  file:
+    dest: /usr/local/bin/node-exporter
+    owner: root
+    group: root
+    mode: 0775
+    recurse: yes
+
+- name: Touch node-exporter.service
+  file:
+    path: "/etc/systemd/system/node-exporter.service"
+    owner: root
+    group: root
+    mode: 0777
+    state: touch
+
+- name: Add node-exporter.service
+  lineinfile:
+    dest: /etc/systemd/system/node-exporter.service
+    line: "{{ item }}"
+  with_items:
+    - "[Unit]"
+    - Description=Node Exporter
+    - After=network.target
+    - "[Service]"
+    - User=thug
+    - Group=root
+    - Type=simple
+    - ExecStart=/usr/local/bin/node-exporter/node_exporter
+    - "[Install]"
+    - WantedBy=multi-user.target
+
+- name: Make sure a service is running
+  systemd:
+    state: started
+    name: node-exporter
+
+- name: enable service tuned and ensure it is not masked
+  systemd:
+    name: node-exporter
+    enabled: yes
+    masked: no
+
+- name: Install ./prometheus-nginxlog-exporter_1.8.0_linux_amd64.deb
+  apt:
+   deb: https://github.com/martin-helmich/prometheus-nginxlog-exporter/releases/download/v1.8.0/prometheus-nginxlog-exporter_1.8.0_linux_amd64.deb
+
+- name: config log format prometheus-nginxlog-exporter
+  lineinfile:
+   dest: /etc/prometheus-nginxlog-exporter.hcl
+   regexp: '^\s* format'
+   line: '     format = "$remote_addr - [$time_local] \"$request\" $status $body_bytes_sent \"$http_referer\" \"$http_user_agent\" \"$http_x_forwarded_for\" \"$request_length\" \"$upstream_response_time\" \"$request_time\""'
+   backrefs: yes
+
+- name: Make sure a service prometheus-nginx-log-exporter is running
+  systemd:
+    state: started
+    name: prometheus-nginxlog-exporter
+
+- name: enable service prometheus-nginxlog-exporter and ensure it is not masked
+  systemd:
+    name: prometheus-nginxlog-exporter
+    enabled: yes
+    masked: no
+
+- name: Update index.html
+  shell: echo '<h1>It`s web machine</h1><p>ip address is {{ ansible_host }}</p>' > /var/www/html/index.html
+  notify: Restarted nginx
+
+

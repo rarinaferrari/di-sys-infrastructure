@@ -1,0 +1,43 @@
+#########################
+######## KIBANA #########
+#########################
+- name: add repository
+  shell:
+    "echo \"deb [trusted=yes] https://mirror.yandex.ru/mirrors/elastic/7/ stable main\" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list"
+
+- name: update apt cache
+  apt:
+    update_cache: yes
+
+- name: install kibana
+  apt:
+    name: kibana
+    state: present
+    update_cache: no
+    cache_valid_time: 3600
+
+
+- name:
+  lineinfile:
+   path: /etc/kibana/kibana.yml
+   regexp: '^#server.host'
+   line: 'server.host: "10.0.10.13"'
+
+- name:
+  lineinfile:
+   path: /etc/kibana/kibana.yml
+   regexp: '^#elasticsearch.hosts'
+   line: 'elasticsearch.hosts: ["http://elastic:9200"]'
+
+- name:
+  lineinfile:
+   path: /etc/kibana/kibana.yml
+   regexp: '^#elasticsearch.username:'
+   line: 'elasticsearch.username: "kibana_system"'
+
+- name:
+  lineinfile:
+   path: /etc/kibana/kibana.yml
+   regexp: '^#elasticsearch.password:'
+   line: 'elasticsearch.password: "301076"'
+  notify: start Kibana

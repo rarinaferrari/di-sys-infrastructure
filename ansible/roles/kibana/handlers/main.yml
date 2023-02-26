@@ -1,0 +1,11 @@
+- name: stop Kibana
+  service:
+    name: kibana
+    enabled: yes
+    state: stopped
+
+- name: start Kibana
+  service:
+    name: kibana
+    enabled: yes
+    state: restarted
